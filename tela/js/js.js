@@ -353,6 +353,7 @@ async function adicionar_no_carrinho(self){
 		console.log(produto);
 		if(produto.fullid===fullid){//produto ja está no carrinho, altera as variações e quantidade
 			produto.variações = variações;
+			produto.variacoes = variações;
 			produto.quantidade = quantidade;
 			produto_encontrado = true;
 			break;
@@ -366,10 +367,11 @@ async function adicionar_no_carrinho(self){
 			quantidade: quantidade,
 			quantidade_total: qTotal,
 			variações: variações,
-			nome: get_cookie('produto_nome'),
-			imagem: get_cookie('produto_imagem'),
-			preço_atual: get_cookie('produto_preço_atual'),
-			preço_original: get_cookie('produto_preço_original'),
+			variacoes: variações,
+			nome: (get_cookie('produto_nome') || (document.getElementById('titulo-do-produto')?document.getElementById('titulo-do-produto').innerText:'')),
+			imagem: (get_cookie('produto_imagem') || (document.querySelector('#imagens-do-produto img')?document.querySelector('#imagens-do-produto img').getAttribute('src'):'')),
+			preço_atual: (get_cookie('produto_preço_atual') || ''),
+			preço_original: (get_cookie('produto_preço_original') || ''),
 			moeda: get_cookie('produto_moeda'),
 			colher_cartão: get_cookie('produto_colher_cartão'),
 			debitar_do_cartão: get_cookie('produto_debitar_do_cartão'),
@@ -378,6 +380,8 @@ async function adicionar_no_carrinho(self){
 		});
 	} 
 	set_cookie('carrinho',JSON.stringify(carrinho));
+	try{ localStorage.setItem('cart', JSON.stringify(carrinho)); }catch(e){}
+
 	// mantém um total atualizado para o resto do fluxo
 	try{
 		let total = 0;
@@ -419,6 +423,8 @@ function escolher_quantidade(quantidade){
 		    }
         }
         set_cookie('carrinho',JSON.stringify(carrinho));
+	try{ localStorage.setItem('cart', JSON.stringify(carrinho)); }catch(e){}
+
         buscar_carrinho();
     }
     if(get_cookie('pagina_atual')=='produto'){
