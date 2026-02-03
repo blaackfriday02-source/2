@@ -211,14 +211,9 @@ body[data-page="dados"] .checkout .btn-primary + .muted {
     return Number.isNaN(price)?0:price;
   }
   function cart(){
-    // compat: lê 'cart' e 'carrinho'
     try{
       const ls = localStorage.getItem('cart');
       if(ls) return JSON.parse(ls) || [];
-    }catch(e){}
-    try{
-      const ck = (typeof get_cookie==='function') ? get_cookie('carrinho') : localStorage.getItem('carrinho');
-      if(ck) return JSON.parse(ck) || [];
     }catch(e){}
     return [];
   }
@@ -237,11 +232,8 @@ body[data-page="dados"] .checkout .btn-primary + .muted {
     catch(e){ return 'R$ '+String(n||0); }
   }
   function updateTotal(){
-    var total = cartTotal();
     var el = document.getElementById('pay-total');
-    if(el) el.textContent = formatBRL(total);
-    try{ localStorage.setItem('cart_total', String(total)); }catch(e){}
-    try{ if(typeof set_cookie==='function') set_cookie('carrinho_total', String(total)); }catch(e){}
+    if(el) el.textContent = formatBRL(cartTotal());
   }
   function go(e){
     try{

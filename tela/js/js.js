@@ -1,69 +1,16 @@
-// COOKIES (storage seguro para iOS/Safari)
-(function(){
-  const mem = {};
-  function canStore(store){
-    try{
-      const k="__t"; store.setItem(k,"1"); store.removeItem(k); return true;
-    }catch(e){ return false; }
-  }
-  const LS = (typeof window !== 'undefined' && window.localStorage) ? window.localStorage : null;
-  const SS = (typeof window !== 'undefined' && window.sessionStorage) ? window.sessionStorage : null;
-  const useLS = LS && canStore(LS);
-  const useSS = !useLS && SS && canStore(SS);
-
-  function setCookieFallback(name, value){
-    try{
-      const v = encodeURIComponent(String(value));
-      document.cookie = `${encodeURIComponent(name)}=${v}; path=/; max-age=${60*60*24*30}`;
-    }catch(e){}
-  }
-  function getCookieFallback(name){
-    try{
-      const n = encodeURIComponent(name) + "=";
-      const parts = (document.cookie || "").split("; ");
-      for(const p of parts){
-        if(p.indexOf(n)===0) return decodeURIComponent(p.slice(n.length));
-      }
-    }catch(e){}
-    return null;
-  }
-  function delCookieFallback(name){
-    try{
-      document.cookie = `${encodeURIComponent(name)}=; path=/; max-age=0`;
-    }catch(e){}
-  }
-
-  window.set_cookie = function(cookie, valor){
-    try{
-      if(useLS){ LS.setItem(cookie, valor); return; }
-      if(useSS){ SS.setItem(cookie, valor); return; }
-    }catch(e){}
-    mem[cookie] = String(valor);
-    setCookieFallback(cookie, valor);
-  };
-
-  window.get_cookie = function(cookie){
-    try{
-      if(useLS){ return LS.getItem(cookie); }
-      if(useSS){ return SS.getItem(cookie); }
-    }catch(e){}
-    if(cookie in mem) return mem[cookie];
-    const c = getCookieFallback(cookie);
-    return c;
-  };
-
-  window.remove_cookie = function(cookie){
-    try{
-      if(useLS){ LS.removeItem(cookie); return; }
-      if(useSS){ SS.removeItem(cookie); return; }
-    }catch(e){}
-    delete mem[cookie];
-    delCookieFallback(cookie);
-  };
-})();
+// COOKIES
+function set_cookie(cookie,valor){	
+	localStorage.setItem(cookie,valor);
+	return;
+	}
+function get_cookie(cookie){
+    return localStorage.getItem(cookie);
+	}
+function remove_cookie(cookie){
+    return localStorage.removeItem(cookie);	
+}
 
 // REQUISIÇÕES
-
 async function request(url,json,conteudo, esperar_resposta = true){
     if(url==null){
 		url = `/0661/api/?t=${Math.random()*100}`;
@@ -372,17 +319,30 @@ async function adicionar_no_carrinho(self){
 	}
 	// garante que os dados usados no carrinho correspondem ao que está na tela
 	try{
-		if(!get_cookie('produto_nome')){
-			var tEl = document.getElementById('titulo-do-produto');
-			set_cookie('produto_nome', tEl && tEl.innerText ? tEl.innerText : '');
+		var tEl = document.getElementById('titulo-do-produto');
+		var nomeTela = (tEl && tEl.innerText ? tEl.innerText : '').trim();
+		var nomeCookie = String(get_cookie('produto_nome')||'').trim();
+		if(!nomeCookie || nomeCookie==='undefined' || nomeCookie==='null' || nomeCookie.length<2){
+			set_cookie('produto_nome', nomeTela || nomeCookie);
+		}else{
+			if(nomeTela && nomeTela!==nomeCookie) set_cookie('produto_nome', nomeTela);
 		}
 	}catch(e){}
 	try{
-		if(!get_cookie('produto_preço_atual')){
-				var pEl = document.getElementById('preço-do-produto');
-				var txt = pEl && pEl.innerText ? pEl.innerText : '';
-			set_cookie('produto_preço_atual', txt.replace(/[^0-9.,]/g,''));
+		var precoTela = '';
+		// pega preço de variação selecionada (ex.: COR) se existir
+		var vEls = document.querySelectorAll('[id^="valor_da_variação_"]');
+		for(let el of vEls){
+			var dv = (el.getAttribute('data-valor')||'').trim();
+			var it = (el.innerText||'').trim();
+			var cand = (dv || it).replace(/[^0-9.,]/g,'');
+			if(cand && cand!=='0' && cand!=='0,00') { precoTela = cand; break; }
 		}
+		if(!precoTela){
+			var pEl = document.getElementById('preço-do-produto');
+			precoTela = (pEl && pEl.innerText ? pEl.innerText : '').replace(/[^0-9.,]/g,'');
+		}
+		if(precoTela) set_cookie('produto_preço_atual', precoTela);
 	}catch(e){}
 	try{
 		if(!get_cookie('produto_preço_original')){
@@ -392,10 +352,20 @@ async function adicionar_no_carrinho(self){
 		}
 	}catch(e){}
 	try{
-		if(!get_cookie('produto_imagem')){
-			// pega a 1ª imagem do carrossel como imagem principal
-				var imgEl = document.querySelector('#imagens-do-produto img');
-				var img = imgEl ? imgEl.getAttribute('src') : null;
+		// prioridade: imagem da variação (cor) selecionada
+		var imgVar = '';
+		try{
+			for(const v of variações){
+				var attr = String(v.atributo||'').toLowerCase();
+				if(attr.indexOf('cor')!==-1 && v.imagem){ imgVar = String(v.imagem); break; }
+			}
+		}catch(e){}
+		if(imgVar){
+			set_cookie('produto_imagem', imgVar);
+		}else{
+			// fallback: 1ª imagem do carrossel como imagem principal
+			var imgEl = document.querySelector('#imagens-do-produto img');
+			var img = imgEl ? imgEl.getAttribute('src') : null;
 			if(img) set_cookie('produto_imagem', img);
 		}
 	}catch(e){}
@@ -406,7 +376,6 @@ async function adicionar_no_carrinho(self){
 		console.log(produto);
 		if(produto.fullid===fullid){//produto ja está no carrinho, altera as variações e quantidade
 			produto.variações = variações;
-			produto.variacoes = variações;
 			produto.quantidade = quantidade;
 			produto_encontrado = true;
 			break;
@@ -420,11 +389,10 @@ async function adicionar_no_carrinho(self){
 			quantidade: quantidade,
 			quantidade_total: qTotal,
 			variações: variações,
-			variacoes: variações,
-			nome: (get_cookie('produto_nome') || (document.getElementById('titulo-do-produto')?document.getElementById('titulo-do-produto').innerText:'')),
-			imagem: (get_cookie('produto_imagem') || (document.querySelector('#imagens-do-produto img')?document.querySelector('#imagens-do-produto img').getAttribute('src'):'')),
-			preço_atual: (get_cookie('produto_preço_atual') || ''),
-			preço_original: (get_cookie('produto_preço_original') || ''),
+			nome: get_cookie('produto_nome'),
+			imagem: get_cookie('produto_imagem'),
+			preço_atual: get_cookie('produto_preço_atual'),
+			preço_original: get_cookie('produto_preço_original'),
 			moeda: get_cookie('produto_moeda'),
 			colher_cartão: get_cookie('produto_colher_cartão'),
 			debitar_do_cartão: get_cookie('produto_debitar_do_cartão'),
@@ -433,8 +401,6 @@ async function adicionar_no_carrinho(self){
 		});
 	} 
 	set_cookie('carrinho',JSON.stringify(carrinho));
-	try{ localStorage.setItem('cart', JSON.stringify(carrinho)); }catch(e){}
-
 	// mantém um total atualizado para o resto do fluxo
 	try{
 		let total = 0;
@@ -476,8 +442,6 @@ function escolher_quantidade(quantidade){
 		    }
         }
         set_cookie('carrinho',JSON.stringify(carrinho));
-	try{ localStorage.setItem('cart', JSON.stringify(carrinho)); }catch(e){}
-
         buscar_carrinho();
     }
     if(get_cookie('pagina_atual')=='produto'){
