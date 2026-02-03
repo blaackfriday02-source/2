@@ -781,9 +781,13 @@ function adicionar_no_carrinho(btn){
       nome: nome,
       imagem: imagem,
       preco_atual: preco_atual_raw,
+      preço_atual: preco_atual_raw,  // compatibilidade
       preco_original: preco_original_raw,
+      preço_original: preco_original_raw,  // compatibilidade
+      preco: preco_atual_raw,  // fallback adicional
       quantidade: quantidade,
-      variacoes: variacoes_sel
+      variacoes: variacoes_sel,
+      variações: variacoes_sel  // compatibilidade
     };
 
     let cart = [];

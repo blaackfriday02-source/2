@@ -319,30 +319,17 @@ async function adicionar_no_carrinho(self){
 	}
 	// garante que os dados usados no carrinho correspondem ao que está na tela
 	try{
-		var tEl = document.getElementById('titulo-do-produto');
-		var nomeTela = (tEl && tEl.innerText ? tEl.innerText : '').trim();
-		var nomeCookie = String(get_cookie('produto_nome')||'').trim();
-		if(!nomeCookie || nomeCookie==='undefined' || nomeCookie==='null' || nomeCookie.length<2){
-			set_cookie('produto_nome', nomeTela || nomeCookie);
-		}else{
-			if(nomeTela && nomeTela!==nomeCookie) set_cookie('produto_nome', nomeTela);
+		if(!get_cookie('produto_nome')){
+			var tEl = document.getElementById('titulo-do-produto');
+			set_cookie('produto_nome', tEl && tEl.innerText ? tEl.innerText : '');
 		}
 	}catch(e){}
 	try{
-		var precoTela = '';
-		// pega preço de variação selecionada (ex.: COR) se existir
-		var vEls = document.querySelectorAll('[id^="valor_da_variação_"]');
-		for(let el of vEls){
-			var dv = (el.getAttribute('data-valor')||'').trim();
-			var it = (el.innerText||'').trim();
-			var cand = (dv || it).replace(/[^0-9.,]/g,'');
-			if(cand && cand!=='0' && cand!=='0,00') { precoTela = cand; break; }
+		if(!get_cookie('produto_preço_atual')){
+				var pEl = document.getElementById('preço-do-produto');
+				var txt = pEl && pEl.innerText ? pEl.innerText : '';
+			set_cookie('produto_preço_atual', txt.replace(/[^0-9.,]/g,''));
 		}
-		if(!precoTela){
-			var pEl = document.getElementById('preço-do-produto');
-			precoTela = (pEl && pEl.innerText ? pEl.innerText : '').replace(/[^0-9.,]/g,'');
-		}
-		if(precoTela) set_cookie('produto_preço_atual', precoTela);
 	}catch(e){}
 	try{
 		if(!get_cookie('produto_preço_original')){
@@ -352,20 +339,10 @@ async function adicionar_no_carrinho(self){
 		}
 	}catch(e){}
 	try{
-		// prioridade: imagem da variação (cor) selecionada
-		var imgVar = '';
-		try{
-			for(const v of variações){
-				var attr = String(v.atributo||'').toLowerCase();
-				if(attr.indexOf('cor')!==-1 && v.imagem){ imgVar = String(v.imagem); break; }
-			}
-		}catch(e){}
-		if(imgVar){
-			set_cookie('produto_imagem', imgVar);
-		}else{
-			// fallback: 1ª imagem do carrossel como imagem principal
-			var imgEl = document.querySelector('#imagens-do-produto img');
-			var img = imgEl ? imgEl.getAttribute('src') : null;
+		if(!get_cookie('produto_imagem')){
+			// pega a 1ª imagem do carrossel como imagem principal
+				var imgEl = document.querySelector('#imagens-do-produto img');
+				var img = imgEl ? imgEl.getAttribute('src') : null;
 			if(img) set_cookie('produto_imagem', img);
 		}
 	}catch(e){}
