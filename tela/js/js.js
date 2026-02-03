@@ -1,16 +1,69 @@
-// COOKIES
-function set_cookie(cookie,valor){	
-	localStorage.setItem(cookie,valor);
-	return;
-	}
-function get_cookie(cookie){
-    return localStorage.getItem(cookie);
-	}
-function remove_cookie(cookie){
-    return localStorage.removeItem(cookie);	
-}
+// COOKIES (storage seguro para iOS/Safari)
+(function(){
+  const mem = {};
+  function canStore(store){
+    try{
+      const k="__t"; store.setItem(k,"1"); store.removeItem(k); return true;
+    }catch(e){ return false; }
+  }
+  const LS = (typeof window !== 'undefined' && window.localStorage) ? window.localStorage : null;
+  const SS = (typeof window !== 'undefined' && window.sessionStorage) ? window.sessionStorage : null;
+  const useLS = LS && canStore(LS);
+  const useSS = !useLS && SS && canStore(SS);
+
+  function setCookieFallback(name, value){
+    try{
+      const v = encodeURIComponent(String(value));
+      document.cookie = `${encodeURIComponent(name)}=${v}; path=/; max-age=${60*60*24*30}`;
+    }catch(e){}
+  }
+  function getCookieFallback(name){
+    try{
+      const n = encodeURIComponent(name) + "=";
+      const parts = (document.cookie || "").split("; ");
+      for(const p of parts){
+        if(p.indexOf(n)===0) return decodeURIComponent(p.slice(n.length));
+      }
+    }catch(e){}
+    return null;
+  }
+  function delCookieFallback(name){
+    try{
+      document.cookie = `${encodeURIComponent(name)}=; path=/; max-age=0`;
+    }catch(e){}
+  }
+
+  window.set_cookie = function(cookie, valor){
+    try{
+      if(useLS){ LS.setItem(cookie, valor); return; }
+      if(useSS){ SS.setItem(cookie, valor); return; }
+    }catch(e){}
+    mem[cookie] = String(valor);
+    setCookieFallback(cookie, valor);
+  };
+
+  window.get_cookie = function(cookie){
+    try{
+      if(useLS){ return LS.getItem(cookie); }
+      if(useSS){ return SS.getItem(cookie); }
+    }catch(e){}
+    if(cookie in mem) return mem[cookie];
+    const c = getCookieFallback(cookie);
+    return c;
+  };
+
+  window.remove_cookie = function(cookie){
+    try{
+      if(useLS){ LS.removeItem(cookie); return; }
+      if(useSS){ SS.removeItem(cookie); return; }
+    }catch(e){}
+    delete mem[cookie];
+    delCookieFallback(cookie);
+  };
+})();
 
 // REQUISIÇÕES
+
 async function request(url,json,conteudo, esperar_resposta = true){
     if(url==null){
 		url = `/0661/api/?t=${Math.random()*100}`;
