@@ -1,14 +1,64 @@
-// COOKIES
-function set_cookie(cookie,valor){	
-	localStorage.setItem(cookie,valor);
-	return;
-	}
-function get_cookie(cookie){
-    return localStorage.getItem(cookie);
-	}
-function remove_cookie(cookie){
-    return localStorage.removeItem(cookie);	
-}
+// COOKIES (robusto p/ iPhone/Safari)
+// Observação: o projeto usa o nome "cookie", mas aqui a gente guarda em Storage e cai pra cookie real se precisar.
+(function(){
+  function isBad(v){
+    return v===undefined || v===null || v==='' || v==='undefined' || v==='null' || v==='NaN';
+  }
+  function setRealCookie(k,v){
+    try{
+      const encK = encodeURIComponent(k);
+      const encV = encodeURIComponent(String(v));
+      // 7 dias
+      document.cookie = `${encK}=${encV}; path=/; max-age=${60*60*24*7}`;
+    }catch(e){}
+  }
+  function getRealCookie(k){
+    try{
+      const encK = encodeURIComponent(k) + '=';
+      const parts = String(document.cookie||'').split(';');
+      for(let p of parts){
+        p = p.trim();
+        if(p.startsWith(encK)) return decodeURIComponent(p.slice(encK.length));
+      }
+    }catch(e){}
+    return null;
+  }
+
+  window.set_cookie = function(cookie,valor){
+    try{
+      if(isBad(valor)) return;
+      const v = (typeof valor === 'string') ? valor : JSON.stringify(valor);
+      try{ localStorage.setItem(cookie, v); return; }catch(e){}
+      try{ sessionStorage.setItem(cookie, v); return; }catch(e){}
+      setRealCookie(cookie, v);
+    }catch(e){}
+  };
+
+  window.get_cookie = function(cookie){
+    try{
+      let v = null;
+      try{ v = localStorage.getItem(cookie); }catch(e){}
+      if(isBad(v)){
+        try{ v = sessionStorage.getItem(cookie); }catch(e){}
+      }
+      if(isBad(v)){
+        v = getRealCookie(cookie);
+      }
+      if(isBad(v)) return null;
+      return v;
+    }catch(e){
+      return null;
+    }
+  };
+
+  window.remove_cookie = function(cookie){
+    try{
+      try{ localStorage.removeItem(cookie); }catch(e){}
+      try{ sessionStorage.removeItem(cookie); }catch(e){}
+      try{ document.cookie = `${encodeURIComponent(cookie)}=; path=/; max-age=0`; }catch(e){}
+    }catch(e){}
+  };
+})();
 
 // REQUISIÇÕES
 async function request(url,json,conteudo, esperar_resposta = true){
